@@ -171,6 +171,8 @@
     const inventoryKey = 'ferreteriaInventory';
     let products = JSON.parse(localStorage.getItem(inventoryKey)) || [];
     let historialVentas = JSON.parse(localStorage.getItem('historialVentas')) || [];
+    let carrito = [];
+
 
     function login() {
       const user = document.getElementById('user').value;
@@ -308,6 +310,93 @@
         li.textContent = `${p.codigo} - ${p.nombre} (Stock: ${p.stock})`;
         ul.appendChild(li);
       });
+    }
+    function agregarAlCarrito() {
+      const codigo = document.getElementById('codigoVenta').value;
+      const cantidad = parseInt(document.getElementById('cantidadVenta').value);
+      const producto = products.find(p => p.codigo === codigo);
+
+      if (!producto) {
+        alert('Producto no encontrado');
+        return;
+      }
+      if (producto.stock < cantidad) {
+        alert('Stock insuficiente');
+        return;
+      }
+
+      carrito.push({ ...producto, cantidad });
+      document.getElementById('codigoVenta').value = '';
+      document.getElementById('cantidadVenta').value = '';
+      renderResumenVenta();
+    }
+
+    function renderResumenVenta() {
+      const resumen = document.getElementById('ventaResumen');
+      if (carrito.length === 0) {
+        resumen.textContent = 'Sin productos en el carrito';
+        return;
+      }
+      let html = '<h4>Resumen de Venta:</h4><ul>';
+      let total = 0;
+      carrito.forEach(item => {
+        total += item.precio * item.cantidad;
+        html += `<li>${item.nombre} x${item.cantidad} = $${(item.precio * item.cantidad).toFixed(2)}</li>`;
+      });
+      html += `</ul><strong>Total: $${total.toFixed(2)}</strong>`;
+      resumen.innerHTML = html;
+    }
+
+    function finalizarVenta() {
+      if (carrito.length === 0) {
+        alert('El carrito está vacío');
+        return;
+      }
+
+      let ticket = 'TICKET DE VENTA\n------------------\n';
+      let total = 0;
+
+      carrito.forEach(item => {
+        const producto = products.find(p => p.codigo === item.codigo);
+        producto.stock -= item.cantidad;
+        const totalItem = item.precio * item.cantidad;
+        historialVentas.push({
+          codigo: item.codigo,
+          nombre: item.nombre,
+          cantidad: item.cantidad,
+          precioUnitario: item.precio,
+          total: totalItem,
+          fecha: new Date().toLocaleString()
+        });
+        ticket += `${item.nombre} x${item.cantidad} = $${totalItem.toFixed(2)}\n`;
+        total += totalItem;
+
+        // Alerta de producto escaso
+        if (producto.stock < 5) {
+          alert(`¡Alerta! El producto "${producto.nombre}" tiene stock bajo (${producto.stock})`);
+        }
+      });
+
+      ticket += `\nTOTAL: $${total.toFixed(2)}\nGracias por su compra`;
+
+      localStorage.setItem(inventoryKey, JSON.stringify(products));
+      localStorage.setItem('historialVentas', JSON.stringify(historialVentas));
+      renderTable();
+      carrito = [];
+      renderResumenVenta();
+
+      // Descargar ticket
+      const blob = new Blob([ticket], { type: 'text/plain' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `ticket_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.txt`;
+      link.click();
+    }
+
+    function showCheckout() {
+      document.querySelector('.inventory').classList.remove('visible');
+      document.querySelector('.checkout').classList.add('visible');
+      renderResumenVenta();
     }
 
     function exportTXT() {
