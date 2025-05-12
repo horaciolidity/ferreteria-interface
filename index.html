@@ -45,6 +45,9 @@
       width: 100%;
       padding: 8px;
     }
+    .form-group {
+      margin: 10px 0;
+    }
   </style>
 </head>
 <body>
@@ -61,12 +64,19 @@
 
   <div class="container inventory">
     <h2>Inventario</h2>
+    <div class="form-group">
+      <input type="text" id="codigoNuevo" placeholder="Código" />
+      <input type="text" id="nombreNuevo" placeholder="Nombre" />
+      <input type="number" id="stockNuevo" placeholder="Stock" />
+      <input type="number" id="precioNuevo" placeholder="Precio" />
+      <button onclick="agregarProducto()">Agregar Producto</button>
+    </div>
     <button onclick="showSearchPage()">Buscar Producto</button>
     <button onclick="exportTXT()">Exportar TXT</button>
     <input type="file" id="importFile" onchange="importTXT(event)" />
     <table id="inventoryTable">
       <thead>
-        <tr><th>Código</th><th>Nombre</th><th>Stock</th><th>Precio</th></tr>
+        <tr><th>Código</th><th>Nombre</th><th>Stock</th><th>Precio</th><th>Acciones</th></tr>
       </thead>
       <tbody></tbody>
     </table>
@@ -95,13 +105,41 @@
       }
     }
 
+    function agregarProducto() {
+      const codigo = document.getElementById('codigoNuevo').value;
+      const nombre = document.getElementById('nombreNuevo').value;
+      const stock = parseInt(document.getElementById('stockNuevo').value);
+      const precio = parseFloat(document.getElementById('precioNuevo').value);
+
+      if (!codigo || !nombre || isNaN(stock) || isNaN(precio)) {
+        alert('Por favor, complete todos los campos correctamente.');
+        return;
+      }
+
+      products.push({ codigo, nombre, stock, precio });
+      localStorage.setItem(inventoryKey, JSON.stringify(products));
+      renderTable();
+      document.getElementById('codigoNuevo').value = '';
+      document.getElementById('nombreNuevo').value = '';
+      document.getElementById('stockNuevo').value = '';
+      document.getElementById('precioNuevo').value = '';
+    }
+
+    function eliminarProducto(index) {
+      if (confirm('¿Seguro que deseas eliminar este producto?')) {
+        products.splice(index, 1);
+        localStorage.setItem(inventoryKey, JSON.stringify(products));
+        renderTable();
+      }
+    }
+
     function renderTable() {
       const tbody = document.querySelector('#inventoryTable tbody');
       tbody.innerHTML = '';
-      products.forEach(p => {
+      products.forEach((p, index) => {
         const tr = document.createElement('tr');
         if (p.stock < 5) tr.classList.add('low-stock');
-        tr.innerHTML = `<td>${p.codigo}</td><td>${p.nombre}</td><td>${p.stock}</td><td>$${p.precio}</td>`;
+        tr.innerHTML = `<td>${p.codigo}</td><td>${p.nombre}</td><td>${p.stock}</td><td>$${p.precio.toFixed(2)}</td><td><button onclick="eliminarProducto(${index})">Eliminar</button></td>`;
         tbody.appendChild(tr);
       });
     }
@@ -153,7 +191,6 @@
       reader.readAsText(file);
     }
 
-    // Simular lectura de código de barras con un input (se puede integrar con lector real)
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         const code = prompt("Código escaneado:");
