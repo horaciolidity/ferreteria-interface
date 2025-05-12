@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestión de Ferretería</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+    }
+    header {
+      background-color: #333;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    .container {
+      padding: 20px;
+    }
+    .login, .inventory, .searchPage {
+      display: none;
+    }
+    .visible {
+      display: block;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+    th {
+      background-color: #333;
+      color: white;
+    }
+    .low-stock {
+      background-color: #ffcccc;
+    }
+    .searchPage input {
+      width: 100%;
+      padding: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Ferretería - Gestión de Inventario</h1>
+  </header>
+
+  <div class="container login visible">
+    <h2>Inicio de Sesión</h2>
+    <input type="text" id="user" placeholder="Usuario" /><br /><br />
+    <input type="password" id="pass" placeholder="Contraseña" /><br /><br />
+    <button onclick="login()">Ingresar</button>
+  </div>
+
+  <div class="container inventory">
+    <h2>Inventario</h2>
+    <button onclick="showSearchPage()">Buscar Producto</button>
+    <button onclick="exportTXT()">Exportar TXT</button>
+    <input type="file" id="importFile" onchange="importTXT(event)" />
+    <table id="inventoryTable">
+      <thead>
+        <tr><th>Código</th><th>Nombre</th><th>Stock</th><th>Precio</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="container searchPage">
+    <h2>Buscar Productos</h2>
+    <input type="text" id="searchInput" placeholder="Buscar por nombre o código" onkeyup="searchProduct()" />
+    <ul id="searchResults"></ul>
+    <button onclick="hideSearchPage()">Volver</button>
+  </div>
+
+  <script>
+    const inventoryKey = 'ferreteriaInventory';
+    let products = JSON.parse(localStorage.getItem(inventoryKey)) || [];
+
+    function login() {
+      const user = document.getElementById('user').value;
+      const pass = document.getElementById('pass').value;
+      if (user === 'admin' && pass === '1234') {
+        document.querySelector('.login').classList.remove('visible');
+        document.querySelector('.inventory').classList.add('visible');
+        renderTable();
+      } else {
+        alert('Credenciales incorrectas');
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.querySelector('#inventoryTable tbody');
+      tbody.innerHTML = '';
+      products.forEach(p => {
+        const tr = document.createElement('tr');
+        if (p.stock < 5) tr.classList.add('low-stock');
+        tr.innerHTML = `<td>${p.codigo}</td><td>${p.nombre}</td><td>${p.stock}</td><td>$${p.precio}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function showSearchPage() {
+      document.querySelector('.inventory').classList.remove('visible');
+      document.querySelector('.searchPage').classList.add('visible');
+    }
+
+    function hideSearchPage() {
+      document.querySelector('.searchPage').classList.remove('visible');
+      document.querySelector('.inventory').classList.add('visible');
+    }
+
+    function searchProduct() {
+      const val = document.getElementById('searchInput').value.toLowerCase();
+      const results = products.filter(p => p.nombre.toLowerCase().includes(val) || p.codigo.toLowerCase().includes(val));
+      const ul = document.getElementById('searchResults');
+      ul.innerHTML = '';
+      results.forEach(p => {
+        const li = document.createElement('li');
+        li.textContent = `${p.codigo} - ${p.nombre} (Stock: ${p.stock})`;
+        ul.appendChild(li);
+      });
+    }
+
+    function exportTXT() {
+      const text = products.map(p => `${p.codigo},${p.nombre},${p.stock},${p.precio}`).join('\n');
+      const blob = new Blob([text], { type: 'text/plain' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'inventario.txt';
+      link.click();
+    }
+
+    function importTXT(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const lines = e.target.result.split('\n');
+        products = lines.map(l => {
+          const [codigo, nombre, stock, precio] = l.split(',');
+          return { codigo, nombre, stock: Number(stock), precio: Number(precio) };
+        });
+        localStorage.setItem(inventoryKey, JSON.stringify(products));
+        renderTable();
+      };
+      reader.readAsText(file);
+    }
+
+    // Simular lectura de código de barras con un input (se puede integrar con lector real)
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const code = prompt("Código escaneado:");
+        const found = products.find(p => p.codigo === code);
+        if (found) alert(`Producto: ${found.nombre} - Stock: ${found.stock}`);
+        else alert('Producto no encontrado');
+      }
+    });
+  </script>
+</body>
+</html>
