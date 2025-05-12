@@ -92,6 +92,8 @@
   <script>
     const inventoryKey = 'ferreteriaInventory';
     let products = JSON.parse(localStorage.getItem(inventoryKey)) || [];
+    let historialVentas = JSON.parse(localStorage.getItem('historialVentas')) || [];
+
 
     function login() {
       const user = document.getElementById('user').value;
@@ -173,6 +175,60 @@
       link.href = URL.createObjectURL(blob);
       link.download = 'inventario.txt';
       link.click();
+    }
+    function venderProducto() {
+      const codigo = document.getElementById('codigoVenta').value;
+      const cantidad = parseInt(document.getElementById('cantidadVenta').value);
+      const resumen = document.getElementById('ventaResumen');
+      const producto = products.find(p => p.codigo === codigo);
+
+      if (!producto) {
+        resumen.textContent = 'Producto no encontrado';
+        return;
+      }
+      if (producto.stock < cantidad) {
+        resumen.textContent = 'Stock insuficiente';
+        return;
+      }
+
+      producto.stock -= cantidad;
+      const venta = {
+        codigo: producto.codigo,
+        nombre: producto.nombre,
+        cantidad,
+        precioUnitario: producto.precio,
+        total: producto.precio * cantidad,
+        fecha: new Date().toLocaleString()
+      };
+      historialVentas.push(venta);
+      localStorage.setItem('historialVentas', JSON.stringify(historialVentas));
+      localStorage.setItem(inventoryKey, JSON.stringify(products));
+      renderTable();
+      resumen.textContent = `Venta realizada: ${producto.nombre} x${cantidad} - Total: $${venta.total.toFixed(2)}`;
+    }
+
+    function mostrarHistorialVentas() {
+      const detalles = historialVentas.map(v => `${v.fecha} - ${v.nombre} x${v.cantidad} - $${v.total.toFixed(2)}`).join('\n');
+      alert("Historial de Ventas:\n" + detalles);
+    }
+
+    function cierreCaja() {
+      let totalCaja = 0;
+      let resumen = 'Cierre de Caja:\n';
+      historialVentas.forEach(v => {
+        totalCaja += v.total;
+        resumen += `${v.nombre} x${v.cantidad} = $${v.total.toFixed(2)}\n`;
+      });
+      resumen += `\nTOTAL: $${totalCaja.toFixed(2)}`;
+      alert(resumen);
+    }
+
+    function showCheckout() {
+      document.querySelector('.inventory').classList.remove('visible');
+      document.querySelector('.checkout').classList.add('visible');
+      const resumen = document.getElementById('ventaResumen');
+      resumen.innerHTML += `<br><button onclick="mostrarHistorialVentas()">Ver Historial</button>
+                            <button onclick="cierreCaja()">Cierre de Caja</button>`;
     }
 
     function importTXT(event) {
