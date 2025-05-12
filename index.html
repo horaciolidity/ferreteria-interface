@@ -20,7 +20,7 @@
     .container {
       padding: 20px;
     }
-    .login, .inventory, .searchPage {
+    .login, .inventory, .searchPage, .checkout {
       display: none;
     }
     .visible {
@@ -41,12 +41,16 @@
     .low-stock {
       background-color: #ffcccc;
     }
-    .searchPage input {
+    .searchPage input, .form-group input {
       width: 100%;
       padding: 8px;
     }
     .form-group {
       margin: 10px 0;
+    }
+    .checkout-buttons button {
+      margin: 5px;
+      padding: 10px;
     }
   </style>
 </head>
@@ -72,6 +76,7 @@
       <button onclick="agregarProducto()">Agregar Producto</button>
     </div>
     <button onclick="showSearchPage()">Buscar Producto</button>
+    <button onclick="showCheckout()">Ir a Caja</button>
     <button onclick="exportTXT()">Exportar TXT</button>
     <input type="file" id="importFile" onchange="importTXT(event)" />
     <table id="inventoryTable">
@@ -89,11 +94,25 @@
     <button onclick="hideSearchPage()">Volver</button>
   </div>
 
+  <div class="container checkout">
+    <h2>Caja de Venta</h2>
+    <div class="form-group">
+      <input type="text" id="codigoVenta" placeholder="Código del producto" />
+      <input type="number" id="cantidadVenta" placeholder="Cantidad" />
+      <button onclick="venderProducto()">Vender</button>
+    </div>
+    <div class="checkout-buttons">
+      <button onclick="mostrarHistorialVentas()">Ver Historial</button>
+      <button onclick="cierreCaja()">Cierre de Caja</button>
+      <button onclick="hideCheckout()">Volver</button>
+    </div>
+    <div id="ventaResumen"></div>
+  </div>
+
   <script>
     const inventoryKey = 'ferreteriaInventory';
     let products = JSON.parse(localStorage.getItem(inventoryKey)) || [];
     let historialVentas = JSON.parse(localStorage.getItem('historialVentas')) || [];
-
 
     function login() {
       const user = document.getElementById('user').value;
@@ -156,26 +175,17 @@
       document.querySelector('.inventory').classList.add('visible');
     }
 
-    function searchProduct() {
-      const val = document.getElementById('searchInput').value.toLowerCase();
-      const results = products.filter(p => p.nombre.toLowerCase().includes(val) || p.codigo.toLowerCase().includes(val));
-      const ul = document.getElementById('searchResults');
-      ul.innerHTML = '';
-      results.forEach(p => {
-        const li = document.createElement('li');
-        li.textContent = `${p.codigo} - ${p.nombre} (Stock: ${p.stock})`;
-        ul.appendChild(li);
-      });
+    function showCheckout() {
+      document.querySelector('.inventory').classList.remove('visible');
+      document.querySelector('.checkout').classList.add('visible');
+      document.getElementById('ventaResumen').textContent = '';
     }
 
-    function exportTXT() {
-      const text = products.map(p => `${p.codigo},${p.nombre},${p.stock},${p.precio}`).join('\n');
-      const blob = new Blob([text], { type: 'text/plain' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'inventario.txt';
-      link.click();
+    function hideCheckout() {
+      document.querySelector('.checkout').classList.remove('visible');
+      document.querySelector('.inventory').classList.add('visible');
     }
+
     function venderProducto() {
       const codigo = document.getElementById('codigoVenta').value;
       const cantidad = parseInt(document.getElementById('cantidadVenta').value);
@@ -220,15 +230,35 @@
         resumen += `${v.nombre} x${v.cantidad} = $${v.total.toFixed(2)}\n`;
       });
       resumen += `\nTOTAL: $${totalCaja.toFixed(2)}`;
+
+      // Mostrar y descargar como TXT
       alert(resumen);
+      const blob = new Blob([resumen], { type: 'text/plain' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `cierre_caja_${new Date().toISOString().slice(0,10)}.txt`;
+      link.click();
     }
 
-    function showCheckout() {
-      document.querySelector('.inventory').classList.remove('visible');
-      document.querySelector('.checkout').classList.add('visible');
-      const resumen = document.getElementById('ventaResumen');
-      resumen.innerHTML += `<br><button onclick="mostrarHistorialVentas()">Ver Historial</button>
-                            <button onclick="cierreCaja()">Cierre de Caja</button>`;
+    function searchProduct() {
+      const val = document.getElementById('searchInput').value.toLowerCase();
+      const results = products.filter(p => p.nombre.toLowerCase().includes(val) || p.codigo.toLowerCase().includes(val));
+      const ul = document.getElementById('searchResults');
+      ul.innerHTML = '';
+      results.forEach(p => {
+        const li = document.createElement('li');
+        li.textContent = `${p.codigo} - ${p.nombre} (Stock: ${p.stock})`;
+        ul.appendChild(li);
+      });
+    }
+
+    function exportTXT() {
+      const text = products.map(p => `${p.codigo},${p.nombre},${p.stock},${p.precio}`).join('\n');
+      const blob = new Blob([text], { type: 'text/plain' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'inventario.txt';
+      link.click();
     }
 
     function importTXT(event) {
